@@ -1,0 +1,97 @@
+version: '2'
+
+services:
+  producer:
+    build:
+      context: $PWD
+      dockerfile: deploy/local/Dockerfile
+    container_name: producer
+    command: ./docker-entrypoint.sh --mode=producer --targets-file=/var/configs/sites.yaml
+    depends_on:
+      - consumer
+      - kafka
+      - zookeeper
+    environment:
+      - KAFKA_TOPIC
+      - KAFKA_BOOTSTRAP_SERVERS
+      - LOGURU_LEVEL=INFO
+    networks:
+      - aiv
+    volumes:
+      - '$PWD/configs:/var/configs'
+  consumer:
+    build:
+      context: $PWD
+      dockerfile: deploy/local/Dockerfile
+    container_name: consumer
+    command: ./docker-entrypoint.sh --mode=consumer
+    depends_on:
+      - postgres
+      - kafka
+      - zookeeper
+    environment:
+      - KAFKA_TOPIC
+      - KAFKA_BOOTSTRAP_SERVERS
+      - KAFKA_CONSUMER_GROUP
+      - POSTGRES_DSN
+      - LOGURU_LEVEL=INFO
+    networks:
+      - aiv
+
+  zookeeper:
+    image: 'docker.io/bitnami/zookeeper:3-debian-10'
+    ports:
+      - '2181:2181'
+    volumes:
+      - 'zookeeper_data:/bitnami'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - aiv
+    logging:
+      driver: "none"
+
+  kafka:
+    image: 'docker.io/bitnami/kafka:2-debian-10'
+    networks:
+      - aiv
+    volumes:
+      - 'kafka_data:/bitnami'
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+    depends_on:
+      - zookeeper
+    expose:
+      - 9092
+      - 29092
+    logging:
+      driver: "none"
+
+  postgres:
+    image: 'postgres:12'
+    ports:
+      - '5432:5432'
+    volumes:
+      - 'postgresql_data:/var/lib/postgresql/data'
+    environment:
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+    networks:
+      - aiv
+    logging:
+      driver: "none"
+
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local
+  postgresql_data:
+    driver: local
+
+networks:
+  aiv:
+    driver: bridge

@@ -1,0 +1,14 @@
+sites:
+  - url: https://status.dev.azure.com/_apis/status/health
+    interval:
+      seconds: 30
+    pattern: 'critical'
+  - url: https://httpbin.org/anything
+    interval:
+      seconds: 30
+      minutes: 1
+    method: post
+    request_kwargs:
+      headers:
+        'content-type': 'application/json'
+

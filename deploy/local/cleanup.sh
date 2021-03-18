@@ -1,0 +1,1 @@
+docker-compose -f deploy/local/docker-compose.yaml --env-file deploy/local/.env rm -v --force
